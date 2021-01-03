@@ -1,0 +1,45 @@
+require 'json';
+require 'net/http';
+require 'openssl';
+require 'uri';
+
+#OpenSSL::SSL::VERIFY_PEER = OpenSSL::SSL::VERIFY_NONE;
+
+def lambda_handler(event:, context:)
+    print("IoTDevOpsCDTrigger.lanbda_handler: entered\n")
+    
+    print("######## event,context: %s,%s",event,context);
+    
+    statusCode = processButtonInput(event,context);
+    
+    print("IoTDevOpsCDTrigger.lanbda_handler: exited\n")
+    { statusCode: statusCode, body: JSON.generate('Hello from IoT Button!') }
+end
+
+def processButtonInput(event,context)
+  userid   = "kps";
+  password = "115afade7471531081d721efbae7c62136";
+  statusCode = "";
+  
+  #jenkinsURL   = "https://kpsportfolio.info/jenkins";
+  jenkinsURL   = "http://ip-172-31-86-166.ec2.internal:8080/jenkins";
+  jenkinsUri   = URI.parse(jenkinsURL);
+  
+  #jobURL     = "https://kpsportfolio.info/jenkins/job/KpsPortfolio/job/DemoJobs/job/DemoIotButton/build?token=KPSToken";
+  jobURL     = "http://ip-172-31-86-166.ec2.internal:8080/jenkins/job/KpsPortfolio/job/DemoJobs/job/DemoIotButton/build?delay=0sec";
+  jobUri     = URI.parse(jobURL);
+  
+  http = Net::HTTP.new(jenkinsUri.host,jenkinsUri.port);
+  http.set_debug_output($stdout);
+  #http.use_ssl = true;
+  #http.verify_mode = OpenSSL::SSL::VERIFY_NONE;
+  http.start() do |http|
+    request = Net::HTTP::Post.new(jobUri);
+    request.basic_auth(userid,password);
+    response = http.request(request);
+    statusCode = response.code;
+    printf("##### statusCode,response.body: %s,%s\n",statusCode,response.body);
+  end
+  
+  return(statusCode);
+end
